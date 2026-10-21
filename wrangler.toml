@@ -1,0 +1,25 @@
+name = "recuerdame"
+main = "worker/index.js"
+compatibility_date = "2024-11-06"
+workers_dev = true
+
+# Sirve la PWA (carpeta public) como archivos estáticos.
+# El Worker (worker/index.js) solo se ejecuta para rutas /api/* que no
+# coinciden con ningún archivo estático.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Base de datos (metadatos de los recordatorios para sincronización).
+# El database_id se rellena automáticamente al crear la D1 con wrangler.
+[[d1_databases]]
+binding = "DB"
+database_name = "recuerdame"
+database_id = "abd9204c-5eaa-4c3b-af8c-8f0390e4c482"
+
+# Almacenamiento de los audios para sincronización multi-dispositivo.
+# Usamos Workers KV (hasta 25 MB por valor; suficiente para notas de voz).
+[[kv_namespaces]]
+binding = "AUDIO_KV"
+id = "404f973e927d4734ab85ce7722217b27"

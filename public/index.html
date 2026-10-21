@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1E7A3C" />
+  <meta name="description" content="RecuérdaME — recordatorios con tu propia voz, para personas mayores." />
+  <title>RecuérdaME</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icons/icon-180.png" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body data-contrast="normal" data-font="1">
+
+  <!-- ============ CABECERA ============ -->
+  <header class="topbar" id="topbar">
+    <button class="icon-btn back-btn" id="backBtn" aria-label="Volver atrás" hidden>
+      <span class="icon">⬅️</span><span class="back-text">Atrás</span>
+    </button>
+    <div class="brand" id="brand">
+      <span class="brand-logo">🎙️</span>
+      <span class="brand-name">Recuérda<b>ME</b></span>
+    </div>
+    <button class="icon-btn gear-btn" id="settingsBtn" aria-label="Ajustes">
+      <span class="icon">⚙️</span>
+    </button>
+  </header>
+
+  <main id="main">
+
+    <!-- ============ INICIO ============ -->
+    <section class="screen" id="screen-home" data-screen="home">
+      <h1 class="screen-title">¿Qué quieres recordar?</h1>
+      <div class="home-grid">
+        <button class="tile" data-section="salud" style="--c:#1E7A3C;--bg:#E4F4EB">
+          <span class="tile-emoji">🏥</span><span class="tile-label">Salud</span>
+        </button>
+        <button class="tile" data-section="casa" style="--c:#C05800;--bg:#FDEEDE">
+          <span class="tile-emoji">🏠</span><span class="tile-label">Casa</span>
+        </button>
+        <button class="tile" data-section="ocio" style="--c:#7B2D9A;--bg:#F2E5FB">
+          <span class="tile-emoji">🎭</span><span class="tile-label">Ocio</span>
+        </button>
+        <button class="tile" data-section="otros" style="--c:#1558A8;--bg:#E3EDFC">
+          <span class="tile-emoji">⭐</span><span class="tile-label">Otros</span>
+        </button>
+      </div>
+
+      <div class="home-actions">
+        <button class="wide-btn" id="remindersBtn" style="--c:#1558A8;--bg:#E3EDFC">
+          <span class="wide-emoji">🔔</span>
+          <span class="wide-text">Mis recordatorios</span>
+          <span class="badge" id="remindersBadge" hidden>0</span>
+        </button>
+        <button class="wide-btn" id="emergencyBtn" style="--c:#C41A1A;--bg:#FDEAEA" hidden>
+          <span class="wide-emoji">📞</span>
+          <span class="wide-text">Llamar a mi familia</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ SUBCATEGORÍAS DE "OTROS" ============ -->
+    <section class="screen" id="screen-subs" data-screen="subs" hidden>
+      <h1 class="screen-title" id="subsTitle">Otros</h1>
+      <div class="home-grid" id="subsGrid"></div>
+      <button class="wide-btn add-sub" id="addSubBtn" style="--c:#1558A8;--bg:#E3EDFC">
+        <span class="wide-emoji">➕</span><span class="wide-text">Añadir apartado</span>
+      </button>
+    </section>
+
+    <!-- ============ SECCIÓN (grabar + notas) ============ -->
+    <section class="screen" id="screen-section" data-screen="section" hidden>
+      <h1 class="screen-title" id="sectionTitle">Sección</h1>
+
+      <!-- Botón grabar grande -->
+      <div class="record-area">
+        <button class="record-btn" id="recordBtn" aria-label="Grabar un recordatorio con tu voz">
+          <span class="record-ring"></span>
+          <span class="record-emoji" id="recordEmoji">🎙️</span>
+          <span class="record-label" id="recordLabel">Pulsa para grabar</span>
+          <span class="record-time" id="recordTime" hidden>0:00</span>
+        </button>
+      </div>
+
+      <!-- Formulario de guardado (oculto hasta grabar) -->
+      <div class="save-form" id="saveForm" hidden>
+        <div class="audio-preview">
+          <button class="play-btn big" id="previewPlay" aria-label="Escuchar lo grabado">▶️ Escuchar</button>
+          <button class="redo-btn" id="redoBtn" aria-label="Grabar otra vez">🔄 Repetir</button>
+        </div>
+
+        <label class="field-label" for="noteTitle">¿Cómo se llama este recordatorio?</label>
+        <div class="title-row">
+          <input class="title-input" id="noteTitle" type="text" placeholder="Por ejemplo: Tomar la pastilla" autocomplete="off" />
+          <button class="mic-btn" id="dictateBtn" aria-label="Decir el título por voz">🎤</button>
+        </div>
+
+        <fieldset class="when-box">
+          <legend>¿Cuándo te aviso?</legend>
+          <div class="when-quick" id="whenQuick">
+            <button class="chip" data-when="none">Sin aviso</button>
+            <button class="chip" data-when="1h">En 1 hora</button>
+            <button class="chip" data-when="3h">En 3 horas</button>
+            <button class="chip" data-when="tomorrow9">Mañana 9:00</button>
+            <button class="chip" data-when="custom">Otra fecha…</button>
+          </div>
+          <div class="when-custom" id="whenCustom" hidden>
+            <label class="field-label" for="whenDate">Día</label>
+            <input class="when-input" id="whenDate" type="date" />
+            <label class="field-label" for="whenTime">Hora</label>
+            <input class="when-input" id="whenTime" type="time" />
+          </div>
+          <div class="repeat-box" id="repeatBox" hidden>
+            <span class="field-label">¿Se repite?</span>
+            <div class="when-quick">
+              <button class="chip" data-repeat="none">Una vez</button>
+              <button class="chip" data-repeat="daily">Cada día</button>
+              <button class="chip" data-repeat="weekly">Cada semana</button>
+              <button class="chip" data-repeat="monthly">Cada mes</button>
+            </div>
+            <label class="pre-alert">
+              <input type="checkbox" id="preAlert" />
+              <span>Avisarme también 30 minutos antes</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="save-actions">
+          <button class="save-btn" id="saveBtn">✅ Guardar</button>
+          <button class="cancel-btn" id="cancelSaveBtn">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Notas guardadas -->
+      <h2 class="notes-heading" id="notesHeading" hidden>Guardados</h2>
+      <div class="notes-grid" id="notesGrid"></div>
+      <p class="empty-hint" id="emptyHint">Aún no hay nada aquí.<br/>Pulsa el botón rojo para grabar tu primer recordatorio.</p>
+    </section>
+
+    <!-- ============ RECORDATORIOS ============ -->
+    <section class="screen" id="screen-reminders" data-screen="reminders" hidden>
+      <h1 class="screen-title">Mis recordatorios</h1>
+      <div class="seg" id="remindersSeg">
+        <button class="seg-btn active" data-tab="upcoming">Próximos</button>
+        <button class="seg-btn" data-tab="history">Hechos</button>
+      </div>
+      <div class="reminders-list" id="remindersList"></div>
+      <p class="empty-hint" id="remindersEmpty">No tienes recordatorios próximos.</p>
+    </section>
+
+    <!-- ============ AJUSTES ============ -->
+    <section class="screen" id="screen-settings" data-screen="settings" hidden>
+      <h1 class="screen-title">Ajustes</h1>
+
+      <div class="setting-block">
+        <span class="setting-title">🔆 Letra grande</span>
+        <div class="seg">
+          <button class="seg-btn" data-font="1">Normal</button>
+          <button class="seg-btn" data-font="1.25">Grande</button>
+          <button class="seg-btn" data-font="1.5">Enorme</button>
+        </div>
+      </div>
+
+      <label class="setting-row">
+        <span class="setting-title">🌓 Alto contraste</span>
+        <span class="switch"><input type="checkbox" id="setContrast" /><span class="slider"></span></span>
+      </label>
+
+      <label class="setting-row">
+        <span class="setting-title">📳 Vibración al pulsar</span>
+        <span class="switch"><input type="checkbox" id="setHaptics" /><span class="slider"></span></span>
+      </label>
+
+      <label class="setting-row">
+        <span class="setting-title">🔊 Confirmar en voz alta</span>
+        <span class="switch"><input type="checkbox" id="setVoice" /><span class="slider"></span></span>
+      </label>
+
+      <label class="setting-row">
+        <span class="setting-title">▶️ Reproducir aviso al abrir</span>
+        <span class="switch"><input type="checkbox" id="setAutoplay" /><span class="slider"></span></span>
+      </label>
+
+      <div class="setting-block">
+        <span class="setting-title">📞 Teléfono de mi familia</span>
+        <p class="setting-hint">Para el botón de llamada rápida en la pantalla de inicio.</p>
+        <input class="title-input" id="setEmName" type="text" placeholder="Nombre (ej: Mi hija María)" autocomplete="off" />
+        <input class="title-input" id="setEmPhone" type="tel" placeholder="Teléfono" autocomplete="off" />
+      </div>
+
+      <div class="setting-block">
+        <span class="setting-title">☁️ Copia en la nube</span>
+        <p class="setting-hint" id="syncHint">Guarda tus recordatorios en la nube para verlos en otro móvil o no perderlos.</p>
+        <div class="sync-box" id="syncBox"></div>
+      </div>
+
+      <div class="setting-block">
+        <span class="setting-title">💾 Mis datos</span>
+        <div class="when-quick">
+          <button class="chip" id="exportBtn">Guardar copia</button>
+          <button class="chip" id="tutorialAgainBtn">Ver tutorial otra vez</button>
+        </div>
+      </div>
+
+      <p class="version-line" id="versionLine">RecuérdaME · versión web</p>
+    </section>
+
+  </main>
+
+  <!-- ============ AVISO DE RECORDATORIO (overlay) ============ -->
+  <div class="overlay reminder-alert" id="reminderAlert" hidden>
+    <div class="alert-card">
+      <span class="alert-emoji" id="alertEmoji">🔔</span>
+      <p class="alert-kicker">Recordatorio</p>
+      <h2 class="alert-title" id="alertTitle"></h2>
+      <button class="play-btn huge" id="alertPlay">▶️ Escuchar</button>
+      <div class="alert-actions">
+        <button class="save-btn" id="alertDone">✅ Hecho</button>
+        <button class="cancel-btn" id="alertSnooze">⏰ En 10 min</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TUTORIAL / BIENVENIDA ============ -->
+  <div class="overlay tutorial" id="tutorial" hidden>
+    <div class="tuto-card">
+      <span class="tuto-emoji" id="tutoEmoji">👋</span>
+      <h2 class="tuto-title" id="tutoTitle">¡Hola!</h2>
+      <p class="tuto-text" id="tutoText">Bienvenido a RecuérdaME.</p>
+      <div class="tuto-dots" id="tutoDots"></div>
+      <div class="tuto-actions">
+        <button class="cancel-btn" id="tutoSkip">Saltar</button>
+        <button class="save-btn" id="tutoNext">Siguiente ▶️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DIÁLOGO GENÉRICO (confirmar / pedir texto) ============ -->
+  <div class="overlay dialog" id="dialog" hidden>
+    <div class="dialog-card">
+      <span class="dialog-emoji" id="dialogEmoji">❓</span>
+      <h2 class="dialog-title" id="dialogTitle"></h2>
+      <input class="title-input" id="dialogInput" type="text" hidden autocomplete="off" />
+      <div class="dialog-emojis" id="dialogEmojis" hidden></div>
+      <div class="dialog-actions">
+        <button class="cancel-btn" id="dialogCancel">No</button>
+        <button class="save-btn" id="dialogOk">Sí</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AVISO EMERGENTE (toast con deshacer) ============ -->
+  <div class="toast" id="toast" hidden>
+    <span class="toast-text" id="toastText"></span>
+    <button class="toast-action" id="toastAction" hidden>Deshacer</button>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

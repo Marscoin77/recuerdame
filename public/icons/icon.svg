@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RecuérdaME">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a9b50"/>
+      <stop offset="1" stop-color="#1E7A3C"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- micrófono -->
+  <rect x="206" y="104" width="100" height="176" rx="50" fill="#ffffff"/>
+  <path d="M164 250a92 92 0 0 0 184 0" fill="none" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+  <rect x="245" y="338" width="22" height="46" rx="11" fill="#ffffff"/>
+  <rect x="198" y="384" width="116" height="22" rx="11" fill="#ffffff"/>
+  <!-- corazón -->
+  <path d="M256 196c-9-19-38-21-50-4-10 14-3 31 10 42l40 34 40-34c13-11 20-28 10-42-12-17-41-15-50 4z" fill="#C41A1A"/>
+</svg>

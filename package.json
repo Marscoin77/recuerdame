@@ -1,0 +1,19 @@
+{
+  "name": "recuerdame",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RecuérdaME — recordatorios con tu propia voz, para personas mayores (+55). PWA + Cloudflare Workers.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "serve": "npx --yes http-server public -p 8080 -c-1",
+    "deploy": "wrangler deploy",
+    "icons": "node scripts/make-icons.mjs",
+    "db:init": "wrangler d1 execute recuerdame --remote --file=./worker/schema.sql"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "sharp": "^0.35.5"
+  }
+}
