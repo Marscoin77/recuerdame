@@ -67,6 +67,14 @@ En Ajustes → "Copia en la nube" → **Crear copia** genera un código (p. ej. 
 - Los avisos con la app **cerrada** dependen de `TimestampTrigger`, disponible solo en algunos navegadores (Chrome/Edge en Android). Con la app abierta o en segundo plano reciente, funcionan siempre. Para avisos 100% fiables en segundo plano haría falta app nativa o Web Push con servidor.
 - El dictado y la voz dependen del navegador (mejor en Chrome/Edge).
 
+## Estado y pruebas
+
+Verificado con pruebas automáticas (Playwright, micrófono simulado):
+
+- **Chromium**: flujo completo (grabar → título → aviso → guardar), **el aviso salta a su hora** y reproduce el audio, "Hecho" lo archiva, copia y restauración, y **funcionamiento sin conexión**.
+- **WebKit (motor de Safari/iPhone) y Firefox**: carga y navegación sin errores; degradación correcta donde no hay dictado/grabación.
+- **Accesibilidad**: auditoría axe-core (WCAG 2.0/2.1 AA) con **0 violaciones**, incluido el modo alto contraste.
+
 ## Licencia
 
 MIT.
