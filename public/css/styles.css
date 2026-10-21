@@ -292,6 +292,11 @@ input { font-family: inherit; }
 :root[data-contrast="high"] .seg-btn.active { background: #fff; color: #000; }
 
 .reminders-list { display: grid; gap: .8rem; }
+.rem-group {
+  font-size: 1.2rem; font-weight: 800; color: var(--ink-soft);
+  margin: .6rem 0 -.2rem; padding-left: .2rem;
+}
+.rem-group:first-child { margin-top: 0; }
 .rem-row {
   display: flex; align-items: center; gap: .9rem;
   padding: 1rem; border: 3px solid var(--line); border-radius: 18px;

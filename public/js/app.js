@@ -692,7 +692,18 @@ async function renderReminders() {
   $("#remindersEmpty").textContent = state.remindersTab === "upcoming"
     ? "No tienes recordatorios próximos." : "Aún no hay nada hecho.";
 
+  let lastGroup = null;
   rows.forEach((n) => {
+    if (state.remindersTab === "upcoming" && n.reminder) {
+      const g = dayGroup(n.reminder.at);
+      if (g !== lastGroup) {
+        lastGroup = g;
+        const h = document.createElement("div");
+        h.className = "rem-group";
+        h.textContent = g;
+        list.appendChild(h);
+      }
+    }
     const meta = SECTIONS[n.section] || SECTIONS.salud;
     const row = document.createElement("div");
     row.className = "rem-row" + (n.done ? " done" : "");
@@ -731,6 +742,8 @@ function bindSettings() {
   $("#setEmPhone").addEventListener("change", (e) => setSetting("emPhone", e.target.value.trim()));
 
   $("#exportBtn").addEventListener("click", exportData);
+  $("#importBtn").addEventListener("click", importData);
+  $("#importFile").addEventListener("change", onImportFile);
   $("#tutorialAgainBtn").addEventListener("click", () => { show("home"); startTutorial(); });
 }
 async function setSetting(key, value) { state.settings[key] = value; await Settings.set(key, value); }
@@ -828,14 +841,60 @@ function autoSync() {
 }
 
 async function exportData() {
+  toast("Preparando copia…");
   const notes = await Notes.all();
-  const data = { app: "RecuérdaME", exportadoEl: new Date().toISOString(), notas: notes };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const subs = await Subs.all();
+  const audios = {};
+  for (const n of notes) {
+    if (n.audioId && !audios[n.audioId]) {
+      const blob = await Audio.get(n.audioId);
+      if (blob) audios[n.audioId] = await blobToDataURL(blob);
+    }
+  }
+  const data = { app: "RecuérdaME", version: 1, exportadoEl: new Date().toISOString(), notas: notes, subs, audios };
+  const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "recuerdame-copia.json"; a.click();
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `recuerdame-copia-${stamp}.json`; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast("💾 Copia descargada");
+  toast("💾 Copia guardada (" + notes.length + " recordatorios)");
+}
+
+function importData() { $("#importFile").click(); }
+async function onImportFile(e) {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { return toast("Ese archivo no es una copia válida"); }
+  if (!data || !Array.isArray(data.notas)) return toast("Ese archivo no es una copia válida");
+  let n = 0;
+  // audios
+  const audios = data.audios || {};
+  for (const [id, dataUrl] of Object.entries(audios)) {
+    try { if (!(await Audio.get(id))) await Audio.put(id, await (await fetch(dataUrl)).blob()); } catch {}
+  }
+  // subcategorías
+  for (const s of (data.subs || [])) { try { await Subs.put(s); } catch {} }
+  // notas (gana la más reciente)
+  const local = new Map((await Notes.all()).map((x) => [x.id, x]));
+  for (const note of data.notas) {
+    const ex = local.get(note.id);
+    if (!ex || (note.updatedAt || 0) >= (ex.updatedAt || 0)) { await Notes.put(note); if (!ex) n++; }
+  }
+  await renderHome(); scheduleAll(); renderSyncBox();
+  speakConfirm("Copia restaurada");
+  openDialog({ emoji: "✅", title: `Copia restaurada. ${n} recordatorio(s) añadidos.`, okText: "Vale", hideCancel: true });
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => resolve(null);
+    r.readAsDataURL(blob);
+  });
 }
 
 /* =========================================================
@@ -869,6 +928,8 @@ async function endTutorial() {
   $("#tutorial").hidden = true;
   Voice.stop();
   await setSetting("tutorialDone", true);
+  // Buen momento (gesto del usuario) para pedir permiso de avisos.
+  ensureNotificationPermission();
 }
 
 /* =========================================================
@@ -990,6 +1051,16 @@ function speakConfirm(text) {
   if (state.settings?.voiceConfirm !== false) Voice.speak(text);
 }
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function dayGroup(ts) {
+  const now = new Date();
+  const d = new Date(ts);
+  if (ts < Date.now()) return "⏰ Pasados";
+  if (d.toDateString() === now.toDateString()) return "Hoy";
+  const tom = new Date(now); tom.setDate(now.getDate() + 1);
+  if (d.toDateString() === tom.toDateString()) return "Mañana";
+  if (ts - Date.now() < 7 * 24 * 3600 * 1000) return "Esta semana";
+  return "Más adelante";
+}
 function toDateInput(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
 function toTimeInput(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
 function pad(n) { return String(n).padStart(2, "0"); }
