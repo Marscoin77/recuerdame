@@ -289,6 +289,9 @@ input { font-family: inherit; }
   font-size: clamp(14px, 4.4vw, 20px); font-weight: 800; white-space: nowrap;
 }
 .seg-btn.active { background: var(--paper); color: var(--c); box-shadow: var(--shadow); }
+/* En alto contraste: contenedor oscuro, texto blanco, activo invertido. */
+:root[data-contrast="high"] .seg { background: #2b2b2b; }
+:root[data-contrast="high"] .seg-btn { color: #fff; }
 :root[data-contrast="high"] .seg-btn.active { background: #fff; color: #000; }
 
 .reminders-list { display: grid; gap: .8rem; }
