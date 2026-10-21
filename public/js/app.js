@@ -34,7 +34,14 @@ const state = {
    ARRANQUE
    ========================================================= */
 async function init() {
-  state.settings = await Settings.load();
+  try {
+    state.settings = await Settings.load();
+  } catch (e) {
+    // Si el almacenamiento falla (p. ej. modo privado), no dejamos la
+    // pantalla en blanco: avisamos con un mensaje claro y grande.
+    showFatal("No puedo guardar datos en este navegador. Prueba a abrir la app en Chrome y sin modo incógnito.");
+    return;
+  }
   applyTheme();
   bindGlobal();
   bindSection();
@@ -44,7 +51,7 @@ async function init() {
 
   registerSW();
   setupInstall();
-  await renderHome();
+  await renderHome().catch(() => {});
   startReminderLoop();
 
   // Atajos del manifest (?go=salud)
@@ -53,6 +60,11 @@ async function init() {
   else if (go === "reminders") openReminders();
 
   if (!state.settings.tutorialDone) startTutorial();
+}
+
+function showFatal(msg) {
+  const m = $("#main");
+  if (m) m.innerHTML = `<div class="screen"><p class="empty-hint" style="margin-top:3rem">⚠️<br/>${esc(msg)}</p></div>`;
 }
 
 /* =========================================================
