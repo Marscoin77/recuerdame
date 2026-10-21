@@ -11,15 +11,11 @@ directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 
-# Base de datos (metadatos de los recordatorios para sincronización).
-# El database_id se rellena automáticamente al crear la D1 con wrangler.
-[[d1_databases]]
-binding = "DB"
-database_name = "recuerdame"
-database_id = "abd9204c-5eaa-4c3b-af8c-8f0390e4c482"
-
-# Almacenamiento de los audios para sincronización multi-dispositivo.
-# Usamos Workers KV (hasta 25 MB por valor; suficiente para notas de voz).
+# Sincronización multi-dispositivo con Workers KV:
+#  - "space:<CODE>"     → metadatos de los recordatorios (JSON)
+#  - "<CODE>/<audioId>" → audios grabados (hasta 25 MB por valor)
+# Se usa KV (no D1) porque el límite diario de escrituras de D1 es de toda
+# la cuenta y puede agotarse por otros proyectos.
 [[kv_namespaces]]
 binding = "AUDIO_KV"
 id = "404f973e927d4734ab85ce7722217b27"

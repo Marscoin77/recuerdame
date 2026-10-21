@@ -24,7 +24,7 @@ App web (PWA) extremadamente sencilla: pulsas un botón grande, grabas con tu vo
 
 - **Front**: PWA en HTML/CSS/JS puro (sin framework), módulos ES. IndexedDB para notas y audios. Service Worker para uso sin conexión e instalación.
 - **APIs del navegador**: MediaRecorder (grabación), SpeechRecognition (dictado), SpeechSynthesis (voz), Notifications + TimestampTrigger (avisos), Vibration (háptica).
-- **Backend/infra**: **Cloudflare Workers** (sirve la PWA + API de sincronización), **D1** (metadatos) y **Workers KV** (audios).
+- **Backend/infra**: **Cloudflare Workers** (sirve la PWA + API de sincronización) y **Workers KV** (metadatos de recordatorios y audios).
 
 ## Estructura
 
@@ -36,8 +36,7 @@ public/            La PWA (lo que se sirve al navegador)
   sw.js  manifest.webmanifest  icons/
 worker/
   index.js         Worker: sirve assets + API /api/*
-  schema.sql       Esquema de D1
-wrangler.toml      Config de Cloudflare (Worker + D1 + KV + assets)
+wrangler.toml      Config de Cloudflare (Worker + KV + assets)
 scripts/make-icons.mjs
 ```
 
@@ -52,11 +51,10 @@ npm run dev            # wrangler dev (con D1/KV locales)
 ## Despliegue (Cloudflare)
 
 ```bash
-npm run db:init        # crea el esquema en D1 (remoto), solo la 1ª vez
 npm run deploy         # wrangler deploy → publica Worker + PWA
 ```
 
-Recursos ya creados en la cuenta de Cloudflare: Worker `recuerdame`, D1 `recuerdame`, KV `AUDIO_KV`.
+Recursos ya creados en la cuenta de Cloudflare: Worker `recuerdame` y KV `AUDIO_KV`.
 
 ## Sincronización (cómo funciona)
 

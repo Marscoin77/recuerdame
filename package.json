@@ -9,8 +9,7 @@
     "start": "wrangler dev",
     "serve": "npx --yes http-server public -p 8080 -c-1",
     "deploy": "wrangler deploy",
-    "icons": "node scripts/make-icons.mjs",
-    "db:init": "wrangler d1 execute recuerdame --remote --file=./worker/schema.sql"
+    "icons": "node scripts/make-icons.mjs"
   },
   "license": "MIT",
   "dependencies": {

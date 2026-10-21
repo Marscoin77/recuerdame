@@ -43,6 +43,7 @@ async function init() {
   bindDialog();
 
   registerSW();
+  setupInstall();
   await renderHome();
   startReminderLoop();
 
@@ -406,6 +407,7 @@ function openNoteDetail(n) {
     ${sub}
     <div class="note-detail-actions">
       <button class="play-btn huge" id="ndPlay">▶️ Escuchar</button>
+      <button class="chip" id="ndShare" style="min-height:64px">📲 Enviar a la familia</button>
       <button class="chip" id="ndDone" style="min-height:64px">${n.done ? "↩️ Marcar como pendiente" : "✅ Marcar como hecho"}</button>
       <button class="chip" id="ndRerec" style="min-height:64px">🎙️ Grabar de nuevo</button>
       <button class="cancel-btn" id="ndDelete" style="min-height:64px">🗑️ Borrar</button>
@@ -415,6 +417,7 @@ function openNoteDetail(n) {
       const blob = await Audio.get(n.audioId);
       if (blob) playBlob(blob); else toast("No encuentro el audio");
     });
+    root.querySelector("#ndShare").addEventListener("click", () => shareNote(n));
     root.querySelector("#ndDone").addEventListener("click", async () => {
       await toggleDone(n); close(); renderSection(); renderHome();
     });
@@ -454,6 +457,66 @@ async function deleteNoteWithUndo(n) {
     onGone: async () => { if (!undone && n.audioId) await Audio.remove(n.audioId); },
   });
   scheduleAll();
+}
+
+/* =========================================================
+   COMPARTIR CON LA FAMILIA (WhatsApp / hoja de compartir)
+   ========================================================= */
+async function shareNote(n) {
+  haptic();
+  const blob = n.audioId ? await Audio.get(n.audioId) : null;
+  const text = `🔊 RecuérdaME — ${n.title || "Nota de voz"}`;
+  // 1) Compartir el audio como archivo (abre WhatsApp y similares en el móvil)
+  if (blob && navigator.canShare) {
+    const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
+    const file = new File([blob], `recordatorio.${ext}`, { type: blob.type || "audio/webm" });
+    if (navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: "RecuérdaME", text }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+  }
+  // 2) Compartir solo texto
+  if (navigator.share) {
+    try { await navigator.share({ title: "RecuérdaME", text }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  // 3) Último recurso: abrir WhatsApp con el texto
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+}
+
+/* =========================================================
+   INSTALAR EN EL MÓVIL (PWA)
+   ========================================================= */
+let deferredInstall = null;
+function setupInstall() {
+  const btn = $("#installBtn");
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (standalone) { btn.hidden = true; return; }
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); deferredInstall = e; btn.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => { btn.hidden = true; deferredInstall = null; toast("✅ ¡Instalada!"); });
+
+  btn.addEventListener("click", async () => {
+    haptic();
+    if (deferredInstall) {
+      deferredInstall.prompt();
+      await deferredInstall.userChoice.catch(() => {});
+      deferredInstall = null; btn.hidden = true;
+    } else {
+      openDialog({
+        emoji: "📲",
+        title: 'Para instalarla: pulsa el botón "Compartir" de tu navegador y elige "Añadir a pantalla de inicio".',
+        okText: "Entendido", hideCancel: true,
+      });
+    }
+  });
+
+  // iOS/iPadOS no lanza beforeinstallprompt: mostramos el botón con instrucciones.
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isIOS) btn.hidden = false;
 }
 
 /* =========================================================
@@ -542,9 +605,20 @@ async function showAlert(n) {
   $("#alertPlay").onclick = () => { haptic(); playNow(); };
   $("#alertDone").onclick = async () => { await resolveAlert(n, true); };
   $("#alertSnooze").onclick = async () => { await resolveAlert(n, false); };
+
+  // Reaviso: si no se confirma, insistir (vibrar + notificar) hasta 3 veces.
+  state.nudgeCount = 0;
+  clearInterval(state.nudgeTimer);
+  state.nudgeTimer = setInterval(() => {
+    if (!state.alertActive || state.nudgeCount >= 3) { clearInterval(state.nudgeTimer); return; }
+    state.nudgeCount++;
+    haptic([250, 120, 250]);
+    notifySystem("🔔 Sigue pendiente: " + (n.title || "Recordatorio"), "Toca para verlo y escucharlo.");
+  }, 90000);
 }
 async function resolveAlert(n, doneIt) {
   stopPlayback(); Voice.stop();
+  clearInterval(state.nudgeTimer);
   $("#reminderAlert").hidden = true;
   state.alertActive = false;
   const fresh = await Notes.get(n.id);
