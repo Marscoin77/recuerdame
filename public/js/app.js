@@ -126,6 +126,12 @@ function goHome() {
    INICIO
    ========================================================= */
 async function renderHome() {
+  // Modo súper simple: un solo botón grande en lugar de las 4 categorías.
+  const simple = state.settings.simple === true;
+  $("#homeGrid").hidden = simple;
+  $("#homeSimple").hidden = !simple;
+  $("#homeTitle").textContent = simple ? "Toca para grabar" : "¿Qué quieres recordar?";
+
   // badge de próximos
   const notes = (await Notes.all()).filter((n) => !n.deleted);
   const upcoming = notes.filter((n) => n.reminder && !n.reminder.done && n.reminder.at > Date.now());
@@ -790,6 +796,11 @@ function bindSettings() {
   $("#setAutoplay").addEventListener("change", (e) => setSetting("autoPlay", e.target.checked));
   $("#setPush").addEventListener("change", (e) => togglePush(e.target.checked));
   $("#pushTest").addEventListener("click", testPush);
+  $("#setSimple").addEventListener("change", async (e) => {
+    await setSetting("simple", e.target.checked);
+    haptic();
+    toast(e.target.checked ? "😊 Modo súper simple activado" : "Modo normal");
+  });
   $("#roleSeg").addEventListener("click", (e) => {
     const b = e.target.closest(".seg-btn[data-role]"); if (!b) return;
     changeRole(b.dataset.role);
@@ -811,6 +822,7 @@ function openSettings() {
   $("#setHaptics").checked = s.haptics !== false;
   $("#setVoice").checked = s.voiceConfirm !== false;
   $("#setAutoplay").checked = s.autoPlay !== false;
+  $("#setSimple").checked = s.simple === true;
   $("#setEmName").value = s.emName || "";
   $("#setEmPhone").value = s.emPhone || "";
   markFontButtons();
@@ -1221,6 +1233,7 @@ function bindGlobal() {
       const s = t.dataset.section;
       if (s === "otros") openOtros(); else openSection(s);
     }));
+  $("#simpleRecord").addEventListener("click", () => openSection("otros"));
   $("#addSubBtn").addEventListener("click", addSubFlow);
   $("#reminderAlert").addEventListener("click", (e) => { if (e.target.id === "reminderAlert") { /* no cerrar por fuera */ } });
 }

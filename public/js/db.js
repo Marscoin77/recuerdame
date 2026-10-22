@@ -78,6 +78,7 @@ const DEFAULT_SETTINGS = {
   syncCode: null,
   role: "owner",      // "owner" (el mayor) | "caregiver" (familiar que cuida)
   push: false,        // avisos en segundo plano activados en este dispositivo
+  simple: false,      // modo súper simple: inicio con un solo botón grande
 };
 
 export const Settings = {

@@ -129,6 +129,22 @@ input { font-family: inherit; }
 /* botón de subcategoría muestra texto más pequeño si es largo */
 .tile.sub .tile-label { font-size: 1.25rem; }
 
+/* ---------- Modo súper simple: un solo botón enorme ---------- */
+.home-simple { display: flex; justify-content: center; margin: 1.2rem 0; }
+.simple-record {
+  width: 100%;
+  min-height: 220px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: .8rem;
+  border: 6px solid var(--c); border-radius: var(--radius-lg);
+  background: var(--bg); color: var(--c);
+  box-shadow: var(--shadow);
+}
+.simple-record:active { transform: scale(.97); }
+.simple-emoji { font-size: 4.6rem; line-height: 1; }
+.simple-text { font-size: 1.7rem; font-weight: 800; }
+:root[data-contrast="high"] .simple-record { background: #000; color: #fff; }
+
 /* ---------- Botones anchos ---------- */
 .home-actions { margin-top: 1.1rem; display: grid; gap: .8rem; }
 .wide-btn {

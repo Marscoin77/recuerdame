@@ -31,8 +31,8 @@
 
     <!-- ============ INICIO ============ -->
     <section class="screen" id="screen-home" data-screen="home">
-      <h1 class="screen-title">¿Qué quieres recordar?</h1>
-      <div class="home-grid">
+      <h1 class="screen-title" id="homeTitle">¿Qué quieres recordar?</h1>
+      <div class="home-grid" id="homeGrid">
         <button class="tile" data-section="salud" style="--c:#1E7A3C;--bg:#E4F4EB">
           <span class="tile-emoji">🏥</span><span class="tile-label">Salud</span>
         </button>
@@ -44,6 +44,14 @@
         </button>
         <button class="tile" data-section="otros" style="--c:#1558A8;--bg:#E3EDFC">
           <span class="tile-emoji">⭐</span><span class="tile-label">Otros</span>
+        </button>
+      </div>
+
+      <!-- Modo súper simple: un único botón enorme para grabar -->
+      <div class="home-simple" id="homeSimple" hidden>
+        <button class="simple-record" id="simpleRecord" style="--c:#C41A1A;--bg:#FDEAEA">
+          <span class="simple-emoji">🎙️</span>
+          <span class="simple-text">Grabar un recordatorio</span>
         </button>
       </div>
 
@@ -162,6 +170,15 @@
     <!-- ============ AJUSTES ============ -->
     <section class="screen" id="screen-settings" data-screen="settings" hidden>
       <h1 class="screen-title">Ajustes</h1>
+
+      <div class="setting-block">
+        <span class="setting-title">😊 Modo súper simple</span>
+        <p class="setting-hint">La pantalla de inicio muestra un solo botón grande para grabar. Más fácil, sin apartados que elegir.</p>
+        <label class="setting-row" style="padding-left:0;padding-right:0">
+          <span class="setting-title" style="font-size:1rem">Activar modo súper simple</span>
+          <span class="switch"><input type="checkbox" id="setSimple" /><span class="slider"></span></span>
+        </label>
+      </div>
 
       <div class="setting-block">
         <span class="setting-title">🔆 Letra grande</span>
