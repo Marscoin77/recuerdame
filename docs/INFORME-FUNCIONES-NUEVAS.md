@@ -48,10 +48,19 @@ También mejoré la seguridad de los datos: al sincronizar ya **no se pierden re
 
 ---
 
-## 4. Lo que queda (tu decisión)
+## 4. Añadido después, en modo automático (ya hecho ✅)
 
+Dos de los detalles que tenía apuntados, dentro de la línea de "simple para mayores":
+
+- **🔔 Botón "Probar un aviso"** (Ajustes, cuando los avisos están activos): manda un aviso real a tu móvil al instante. Sirve para **comprobar en 1 minuto que las notificaciones llegan de verdad** — justo el único punto que yo no podía verificar sin un teléfono delante. Pulsas y debería aparecer el aviso en unos segundos.
+- **😊 Modo súper simple** (Ajustes): la pantalla de inicio pasa a mostrar **un único botón enorme "Grabar un recordatorio"**, sin los 4 apartados. Para quien le cuesta elegir. "Mis recordatorios" y la llamada a la familia siguen ahí. Se activa y desactiva cuando quieras.
+
+Ambas probadas (test de extremo a extremo + accesibilidad AA, 0 problemas), desplegadas y en GitHub.
+
+## 5. Lo que queda (tu decisión)
+
+- **Foto opcional en el recordatorio**: útil (p. ej. foto de la pastilla o de la persona a la que llamar), pero es lo único que añade algo de complejidad (hacer la foto, guardarla y sincronizarla). **No la he metido a propósito**, para no complicar la app sin tu visto bueno. Si la quieres, la hago.
 - **Opción B (app nativa Android, Google Play)**: sigue siendo el gran salto para avisos 100% garantizados con pantalla bloqueada. Necesita cuenta de desarrollador de Google (25 € una vez). Dime si arrancamos.
 - **Dominio propio** (p. ej. *recuerdame.app*): si quieres, lo preparo con Cloudflare.
-- Detalles pequeños que tenía apuntados: botón **"Probar un aviso"**, **modo súper simple**, **foto** opcional en el recordatorio.
 
 Cuando quieras, seguimos. 🎙️❤️
