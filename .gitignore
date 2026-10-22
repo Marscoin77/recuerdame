@@ -8,3 +8,17 @@ Thumbs.db
 
 # APK generado (se sirve, no se versiona)
 public/download/
+
+# Android / Capacitor: fuente SÍ, pero nunca la clave de firma ni lo generado
+android/app/recuerdame.keystore
+*.keystore
+*.jks
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/local.properties
+.gradle/
+capacitor.config.*.json

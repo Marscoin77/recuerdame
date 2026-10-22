@@ -2,7 +2,7 @@
    Cachea la app para que funcione sin conexión y abre la nota
    correcta cuando se toca una notificación de recordatorio. */
 
-const CACHE = "recuerdame-v6";
+const CACHE = "recuerdame-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -15,6 +15,8 @@ const ASSETS = [
   "./js/reminders.js",
   "./js/sync.js",
   "./js/push.js",
+  "./js/native.js",
+  "./js/capacitor.js",
   "./icons/icon.svg",
 ];
 

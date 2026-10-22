@@ -8,6 +8,7 @@ import { Dictation, Voice } from "./speech.js";
 import { quickWhenToTs, advance, humanWhen, shortDate, repeatLabel, MIN } from "./reminders.js";
 import { Sync } from "./sync.js";
 import { Push } from "./push.js";
+import { Native } from "./native.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -52,6 +53,8 @@ async function init() {
 
   registerSW();
   setupInstall();
+  // App nativa (APK): avisos como notificaciones del móvil, a su hora exacta.
+  if (Native.isApp) await Native.init(openNoteById).catch(() => {});
   await renderHome().catch(() => {});
   startReminderLoop();
 
@@ -589,6 +592,12 @@ function startReminderLoop() {
 }
 
 async function scheduleAll() {
+  // App nativa (APK): las notificaciones del móvil las gestiona Capacitor,
+  // que las dispara a la hora exacta aunque esté cerrada y sin internet.
+  if (Native.isApp) {
+    try { await Native.sync(await Notes.all()); } catch {}
+    return;
+  }
   // Programa notificaciones del sistema (si el navegador lo permite) para
   // que suenen aunque la app esté cerrada. Es una mejora progresiva.
   if (!("serviceWorker" in navigator) || !("TimestampTrigger" in window)) return;

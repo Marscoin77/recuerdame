@@ -1,0 +1,14 @@
+{
+  "appId": "dev.workers.adriagimenez238.recuerdame",
+  "appName": "RecuérdaME",
+  "webDir": "public",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#2563EB"
+    }
+  }
+}
