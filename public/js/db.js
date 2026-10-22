@@ -76,6 +76,8 @@ const DEFAULT_SETTINGS = {
   emName: "",
   emPhone: "",
   syncCode: null,
+  role: "owner",      // "owner" (el mayor) | "caregiver" (familiar que cuida)
+  push: false,        // avisos en segundo plano activados en este dispositivo
 };
 
 export const Settings = {

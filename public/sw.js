@@ -2,7 +2,7 @@
    Cachea la app para que funcione sin conexión y abre la nota
    correcta cuando se toca una notificación de recordatorio. */
 
-const CACHE = "recuerdame-v2";
+const CACHE = "recuerdame-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const ASSETS = [
   "./js/speech.js",
   "./js/reminders.js",
   "./js/sync.js",
+  "./js/push.js",
   "./icons/icon.svg",
 ];
 
@@ -47,6 +48,30 @@ self.addEventListener("fetch", (e) => {
       return cached || net;
     })
   );
+});
+
+// Aviso push del servidor (llega aunque la app esté cerrada).
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = {}; }
+  const title = d.title || "🔔 RecuérdaME";
+  const options = {
+    body: d.body || "Tienes un recordatorio.",
+    icon: "./icons/icon-192.png",
+    badge: "./icons/icon-192.png",
+    tag: (d.kind || "rem") + "-" + (d.noteId || ""),
+    renotify: true,
+    requireInteraction: d.kind === "main" || d.kind === "unconfirmed",
+    vibrate: [200, 100, 200],
+    data: { noteId: d.noteId || null },
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Si el navegador renueva la suscripción, la app la re-registrará al abrir;
+// aquí solo evitamos que el evento quede sin manejar.
+self.addEventListener("pushsubscriptionchange", (e) => {
+  e.waitUntil(Promise.resolve());
 });
 
 // Al tocar una notificación → abrir la app y mostrar la nota.

@@ -326,6 +326,17 @@ input { font-family: inherit; }
   background: var(--paper); border: 2px solid var(--line);
   border-radius: 18px; padding: 1.1rem; margin-bottom: .8rem;
 }
+
+/* Banner del modo cuidador (en la pantalla de inicio) */
+.care-banner {
+  background: #E3EDFC; border: 3px solid #1558A8; color: #0f3a73;
+  border-radius: var(--radius); padding: 1rem 1.1rem; margin-bottom: 1rem;
+  font-size: 1.1rem; font-weight: 700; line-height: 1.35;
+  box-shadow: var(--shadow); text-align: center;
+}
+.care-banner .care-sub { display: block; font-weight: 500; font-size: .95rem; margin-top: .3rem; color: #214e86; }
+:root[data-contrast="high"] .care-banner { background: #0b2545; border-color: #7fb0ff; color: #fff; }
+:root[data-contrast="high"] .care-banner .care-sub { color: #cfe0ff; }
 .setting-block .setting-title { display: block; margin-bottom: .7rem; }
 .setting-hint { font-size: 1rem; color: var(--ink-soft); margin: 0 0 .8rem; }
 .setting-block .title-input { margin-bottom: .6rem; width: 100%; }

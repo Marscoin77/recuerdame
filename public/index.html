@@ -47,6 +47,8 @@
         </button>
       </div>
 
+      <div class="care-banner" id="careBanner" hidden></div>
+
       <div class="home-actions">
         <button class="wide-btn" id="remindersBtn" style="--c:#1558A8;--bg:#E3EDFC">
           <span class="wide-emoji">🔔</span>
@@ -127,6 +129,10 @@
               <input type="checkbox" id="preAlert" />
               <span>Avisarme también 30 minutos antes</span>
             </label>
+            <label class="pre-alert" id="impAlertRow">
+              <input type="checkbox" id="impAlert" />
+              <span>⚠️ Importante: avisar a mi familia si no lo confirmo</span>
+            </label>
           </div>
         </fieldset>
 
@@ -185,6 +191,25 @@
         <span class="setting-title">▶️ Reproducir aviso al abrir</span>
         <span class="switch"><input type="checkbox" id="setAutoplay" /><span class="slider"></span></span>
       </label>
+
+      <div class="setting-block">
+        <span class="setting-title">🔔 Avisarme aunque la app esté cerrada</span>
+        <p class="setting-hint" id="pushHint">Recibe el aviso a su hora aunque no tengas la app abierta. Recomendado tras instalarla en el móvil.</p>
+        <label class="setting-row" style="padding-left:0;padding-right:0">
+          <span class="setting-title" style="font-size:1rem">Activar avisos en segundo plano</span>
+          <span class="switch"><input type="checkbox" id="setPush" /><span class="slider"></span></span>
+        </label>
+      </div>
+
+      <div class="setting-block" id="familyBlock">
+        <span class="setting-title">👨‍👩‍👧 Familia</span>
+        <p class="setting-hint">¿De quién es este móvil?</p>
+        <div class="seg" id="roleSeg">
+          <button class="seg-btn" data-role="owner">Es el mío</button>
+          <button class="seg-btn" data-role="caregiver">Cuido a alguien</button>
+        </div>
+        <p class="setting-hint" id="roleHint"></p>
+      </div>
 
       <div class="setting-block">
         <span class="setting-title">📞 Teléfono de mi familia</span>

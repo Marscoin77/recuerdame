@@ -1,7 +1,9 @@
 /* ============================================================
    sync.js — Copia / sincronización en la nube (Cloudflare)
-   Sube los metadatos (D1) y los audios (R2) asociados a un
-   código. Pensado para no perder datos y usarlos en otro móvil.
+   Sube los metadatos y los audios (ambos en Workers KV) asociados
+   a un código. El servidor fusiona por id (gana el más reciente),
+   así que ningún dispositivo borra datos de otro al subir su lista.
+   Pensado para no perder datos y usarlos en otro móvil o en familia.
    ============================================================ */
 
 import { Notes, Audio, Settings } from "./db.js";
@@ -62,8 +64,8 @@ export const Sync = {
     for (const rn of remote) {
       const ln = local.get(rn.id);
       if (!ln || (rn.updatedAt || 0) > (ln.updatedAt || 0)) {
-        // Descargar audio si falta en local
-        if (rn.audioId && !(await Audio.get(rn.audioId))) {
+        // Descargar audio si falta en local (no para notas borradas).
+        if (rn.audioId && !rn.deleted && !(await Audio.get(rn.audioId))) {
           try {
             const ar = await fetch(`${API}/api/audio/${code}/${rn.audioId}`);
             if (ar.ok) await Audio.put(rn.audioId, await ar.blob());
@@ -71,7 +73,7 @@ export const Sync = {
         }
         rn.cloudAudio = true;
         await Notes.put(rn);
-        if (!ln) added++;
+        if (!ln && !rn.deleted) added++;
       }
     }
     await Settings.set("syncCode", code);

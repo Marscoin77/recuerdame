@@ -19,3 +19,14 @@ not_found_handling = "single-page-application"
 [[kv_namespaces]]
 binding = "AUDIO_KV"
 id = "404f973e927d4734ab85ce7722217b27"
+
+# Cron: cada minuto revisa los recordatorios y envía avisos push aunque la
+# app esté cerrada (ver scheduled() en worker/index.js).
+[triggers]
+crons = ["* * * * *"]
+
+# Variables públicas (NO secretas). La clave privada VAPID se guarda como
+# secreto con:  wrangler secret put VAPID_PRIVATE_JWK
+[vars]
+VAPID_PUBLIC = "BPA_pYlaFfg9RoisjdbqHl9I3z99dGDfszaEDgaoql5pOT9pWNiI2i_cdPYBsa3y8vgIHhERk-T9joSgv_TZUtg"
+VAPID_SUBJECT = "mailto:adriagimenez238@gmail.com"

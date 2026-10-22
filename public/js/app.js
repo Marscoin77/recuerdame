@@ -7,6 +7,7 @@ import { Recorder, playBlob, stopPlayback, fmtDuration } from "./audio.js";
 import { Dictation, Voice } from "./speech.js";
 import { quickWhenToTs, advance, humanWhen, shortDate, repeatLabel, MIN } from "./reminders.js";
 import { Sync } from "./sync.js";
+import { Push } from "./push.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -53,6 +54,12 @@ async function init() {
   setupInstall();
   await renderHome().catch(() => {});
   startReminderLoop();
+
+  // Si los avisos en segundo plano estaban activos, re-registramos la
+  // suscripción por si el servidor la hubiera perdido.
+  if (state.settings.push && state.settings.syncCode) {
+    Push.refresh(state.settings.syncCode, state.settings.role || "owner").catch(() => {});
+  }
 
   // Atajos del manifest (?go=salud)
   const go = new URLSearchParams(location.search).get("go");
@@ -120,7 +127,7 @@ function goHome() {
    ========================================================= */
 async function renderHome() {
   // badge de próximos
-  const notes = await Notes.all();
+  const notes = (await Notes.all()).filter((n) => !n.deleted);
   const upcoming = notes.filter((n) => n.reminder && !n.reminder.done && n.reminder.at > Date.now());
   const badge = $("#remindersBadge");
   badge.hidden = upcoming.length === 0;
@@ -132,6 +139,18 @@ async function renderHome() {
     em.querySelector(".wide-text").textContent = state.settings.emName
       ? "Llamar a " + state.settings.emName : "Llamar a mi familia";
   } else em.hidden = true;
+
+  // banner de modo cuidador
+  const banner = $("#careBanner");
+  if (state.settings.role === "caregiver" && state.settings.syncCode) {
+    banner.hidden = false;
+    banner.innerHTML = `👨‍👩‍👧 Estás ayudando a tu familiar.
+      <span class="care-sub">Lo que grabes aquí le llegará a su móvil. Código: ${esc(state.settings.syncCode)}</span>`;
+  } else if (state.settings.role === "caregiver") {
+    banner.hidden = false;
+    banner.innerHTML = `👨‍👩‍👧 Modo familiar
+      <span class="care-sub">Ve a Ajustes → Familia y escribe el código de la persona a la que cuidas.</span>`;
+  } else banner.hidden = true;
 }
 
 /* =========================================================
@@ -185,7 +204,7 @@ async function renderSection() {
   $("#sectionTitle").textContent = title;
 
   const notes = (await Notes.all())
-    .filter((n) => n.section === state.section && (state.sub ? n.sub === state.sub.id : !n.sub))
+    .filter((n) => !n.deleted && n.section === state.section && (state.sub ? n.sub === state.sub.id : !n.sub))
     .sort((a, b) => sortNotes(a, b));
 
   const grid = $("#notesGrid");
@@ -285,6 +304,7 @@ function showSaveForm() {
   $("#whenCustom").hidden = true;
   $("#repeatBox").hidden = true;
   $("#preAlert").checked = false;
+  $("#impAlert").checked = false;
   f.scrollIntoView({ behavior: "smooth", block: "center" });
   $("#noteTitle").focus();
 }
@@ -356,6 +376,7 @@ async function saveNote() {
   haptic();
   const title = ($("#noteTitle").value || "").trim() || "Recordatorio de voz";
   const preAlert = $("#preAlert").checked;
+  const important = $("#impAlert").checked;
   const when = $("#repeatBox").hidden ? null : state.pending.when;
 
   let note;
@@ -384,7 +405,7 @@ async function saveNote() {
 
   // Recordatorio
   if (when && when > Date.now()) {
-    note.reminder = { at: when, repeat: state.pending.repeat || "none", preAlert, done: false, lastFired: 0, lastPre: 0 };
+    note.reminder = { at: when, repeat: state.pending.repeat || "none", preAlert, important, done: false, lastFired: 0, lastPre: 0 };
     await ensureNotificationPermission();
   } else {
     note.reminder = null;
@@ -460,13 +481,25 @@ async function toggleDone(n) {
 }
 
 async function deleteNoteWithUndo(n) {
-  await Notes.remove(n.id);
+  // Borrado "blando" (tombstone): así la eliminación también se sincroniza
+  // y la nota no reaparece al traer datos de la nube.
+  n.deleted = true;
+  n.updatedAt = Date.now();
+  if (n.reminder) n.reminder.done = true;
+  await Notes.put(n);
   await renderSection(); renderHome();
   let undone = false;
   toast("🗑️ Borrado", {
     actionText: "Deshacer",
-    onAction: async () => { undone = true; await Notes.put(n); await renderSection(); renderHome(); },
-    onGone: async () => { if (!undone && n.audioId) await Audio.remove(n.audioId); },
+    onAction: async () => {
+      undone = true;
+      n.deleted = false;
+      if (n.reminder && n.reminder.at > Date.now()) n.reminder.done = false;
+      n.updatedAt = Date.now();
+      await Notes.put(n);
+      await renderSection(); renderHome(); scheduleAll(); autoSync();
+    },
+    onGone: async () => { if (!undone) autoSync(); },
   });
   scheduleAll();
 }
@@ -535,13 +568,18 @@ function setupInstall() {
    RECORDATORIOS: programación y disparo
    ========================================================= */
 let loopTimer = null;
+let pullTimer = null;
 function startReminderLoop() {
   scheduleAll();
   clearInterval(loopTimer);
   loopTimer = setInterval(checkDue, 15000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkDue(); });
-  window.addEventListener("focus", checkDue);
+  // Trae cambios de la nube periódicamente (modo familia / varios móviles).
+  clearInterval(pullTimer);
+  pullTimer = setInterval(autoPull, 45000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { checkDue(); autoPull(); } });
+  window.addEventListener("focus", () => { checkDue(); autoPull(); });
   checkDue();
+  autoPull();
 }
 
 async function scheduleAll() {
@@ -554,7 +592,7 @@ async function scheduleAll() {
     existing.forEach((nf) => nf.tag && nf.tag.startsWith("rem-") && nf.close());
     const notes = await Notes.all();
     for (const n of notes) {
-      if (n.reminder && !n.reminder.done && n.reminder.at > Date.now()) {
+      if (n.reminder && !n.reminder.done && !n.deleted && n.reminder.at > Date.now()) {
         reg.showNotification("🔔 " + (n.title || "Recordatorio"), {
           tag: "rem-" + n.id,
           body: "Toca para escuchar tu recordatorio",
@@ -573,7 +611,7 @@ async function checkDue() {
   const now = Date.now();
   for (const n of notes) {
     const r = n.reminder;
-    if (!r || r.done) continue;
+    if (!r || r.done || n.deleted) continue;
     // aviso previo
     if (r.preAlert) {
       const pre = r.at - 30 * MIN;
@@ -689,7 +727,7 @@ function bindReminders() {
 function openReminders() { pushNav(); resetColor(); renderReminders(); show("reminders"); }
 
 async function renderReminders() {
-  const notes = await Notes.all();
+  const notes = (await Notes.all()).filter((n) => !n.deleted);
   const list = $("#remindersList");
   list.innerHTML = "";
   let rows;
@@ -750,6 +788,11 @@ function bindSettings() {
   $("#setHaptics").addEventListener("change", (e) => setSetting("haptics", e.target.checked));
   $("#setVoice").addEventListener("change", (e) => setSetting("voiceConfirm", e.target.checked));
   $("#setAutoplay").addEventListener("change", (e) => setSetting("autoPlay", e.target.checked));
+  $("#setPush").addEventListener("change", (e) => togglePush(e.target.checked));
+  $("#roleSeg").addEventListener("click", (e) => {
+    const b = e.target.closest(".seg-btn[data-role]"); if (!b) return;
+    changeRole(b.dataset.role);
+  });
   $("#setEmName").addEventListener("change", (e) => setSetting("emName", e.target.value.trim()));
   $("#setEmPhone").addEventListener("change", (e) => setSetting("emPhone", e.target.value.trim()));
 
@@ -771,7 +814,22 @@ function openSettings() {
   $("#setEmPhone").value = s.emPhone || "";
   markFontButtons();
   renderSyncBox();
+  markRoleButtons();
+  refreshPushToggle();
   show("settings");
+}
+function markRoleButtons() {
+  const role = state.settings.role || "owner";
+  $$("#roleSeg .seg-btn[data-role]").forEach((b) => b.classList.toggle("active", b.dataset.role === role));
+  $("#roleHint").textContent = role === "caregiver"
+    ? "Este móvil ayuda a otra persona. Escribe su código en «Copia en la nube» y lo que grabes le llegará a su móvil."
+    : "Este móvil es tuyo. Si quieres que un familiar te ayude a distancia, comparte tu código de «Copia en la nube».";
+}
+async function refreshPushToggle() {
+  const el = $("#setPush");
+  if (!Push.supported()) { el.checked = false; el.disabled = true; $("#pushHint").textContent = "Este navegador no permite avisos en segundo plano. Prueba a instalar la app en el móvil (Chrome en Android, o Safari en iPhone con iOS 16.4 o superior)."; return; }
+  el.disabled = false;
+  el.checked = await Push.isSubscribed();
 }
 function markFontButtons() {
   $$("#screen-settings .seg-btn[data-font]").forEach((b) =>
@@ -839,6 +897,7 @@ function joinSync() {
         const { total } = await Sync.pull(val.toUpperCase().trim());
         state.settings.syncCode = val.toUpperCase().trim();
         await setSetting("syncCode", state.settings.syncCode);
+        if (state.settings.push) await Push.enable(state.settings.syncCode, state.settings.role || "owner");
         renderSyncBox(); await renderHome();
         openDialog({ emoji: "✅", title: `Conectado. Tienes ${total} recordatorio(s).`, okText: "Vale", hideCancel: true });
       } catch { toast("No encuentro esa copia"); }
@@ -850,6 +909,93 @@ function autoSync() {
   if (!state.settings.syncCode || !navigator.onLine) return;
   clearTimeout(syncTimer);
   syncTimer = setTimeout(() => Sync.push(state.settings.syncCode).catch(() => {}), 2500);
+}
+
+/* Trae cambios de la nube y refresca la pantalla (modo familia / varios móviles). */
+let pulling = false;
+async function autoPull() {
+  if (pulling || !state.settings.syncCode || !navigator.onLine) return;
+  pulling = true;
+  try {
+    const { added } = await Sync.pull(state.settings.syncCode);
+    if (added) {
+      scheduleAll();
+      await renderHome();
+      if (state.screen === "section") renderSection();
+      if (state.screen === "reminders") renderReminders();
+    }
+  } catch {} finally { pulling = false; }
+}
+
+/* Asegura que existe un código de espacio (lo crea si hace falta). */
+async function ensureSyncCode() {
+  if (state.settings.syncCode) return state.settings.syncCode;
+  if (!navigator.onLine) return null;
+  const code = await Sync.pair();
+  await Sync.push(code);
+  state.settings.syncCode = code;
+  await setSetting("syncCode", code);
+  renderSyncBox();
+  return code;
+}
+
+/* Interruptor de avisos en segundo plano (Web Push). */
+async function togglePush(on) {
+  const el = $("#setPush");
+  if (!on) {
+    await Push.disable(state.settings.syncCode);
+    await setSetting("push", false);
+    toast("🔕 Avisos en segundo plano desactivados");
+    return;
+  }
+  if (!Push.supported()) { el.checked = false; return; }
+  toast("Activando avisos…");
+  let code;
+  try { code = await ensureSyncCode(); } catch { code = null; }
+  if (!code) { el.checked = false; return toast("Necesito conexión para activar los avisos"); }
+  const res = await Push.enable(code, state.settings.role || "owner");
+  if (res === "ok") {
+    await setSetting("push", true);
+    toast("🔔 Listo: te avisaré aunque la app esté cerrada");
+    speakConfirm("Avisos activados");
+  } else if (res === "denied") {
+    el.checked = false;
+    openDialog({ emoji: "🔔", title: "Para recibir avisos, tu navegador debe permitir las notificaciones. Búscalo en los ajustes del navegador y actívalas.", okText: "Entendido", hideCancel: true });
+  } else {
+    el.checked = false;
+    toast("No se pudieron activar los avisos");
+  }
+}
+
+/* Cambio de rol (mío / cuido a alguien). */
+async function changeRole(role) {
+  if (role === state.settings.role) return;
+  await setSetting("role", role);
+  markRoleButtons();
+  haptic();
+  if (role === "caregiver" && !state.settings.syncCode) {
+    openDialog({
+      emoji: "👨‍👩‍👧", title: "Escribe el código de la persona a la que vas a ayudar",
+      input: true, placeholder: "Ej: 7K2P-9QX", okText: "Conectar",
+      onOk: async (val) => {
+        if (!val) return;
+        try {
+          const code = val.toUpperCase().trim();
+          const { total } = await Sync.pull(code);
+          state.settings.syncCode = code;
+          await setSetting("syncCode", code);
+          renderSyncBox();
+          if (state.settings.push) await Push.enable(code, "caregiver");
+          await renderHome();
+          openDialog({ emoji: "✅", title: `Conectado. Tu familiar tiene ${total} recordatorio(s). Lo que grabes le llegará.`, okText: "Vale", hideCancel: true });
+        } catch { toast("No encuentro esa persona. Revisa el código."); }
+      },
+    });
+  } else if (state.settings.push && state.settings.syncCode) {
+    await Push.refresh(state.settings.syncCode, role);
+  }
+  await renderHome();
+  toast(role === "caregiver" ? "👨‍👩‍👧 Modo familiar activado" : "✅ Este móvil vuelve a ser el tuyo");
 }
 
 async function exportData() {
@@ -1086,8 +1232,13 @@ function registerSW() {
   }
 }
 async function openNoteById(id) {
-  const n = await Notes.get(id);
-  if (n) { enqueueAlert(n); if (!state.alertActive) nextAlert(); }
+  let n = await Notes.get(id);
+  // Si llega un aviso de una nota que aún no tenemos (p. ej. la añadió un
+  // familiar), la traemos de la nube antes de mostrarla.
+  if (!n && state.settings.syncCode && navigator.onLine) {
+    try { await Sync.pull(state.settings.syncCode); n = await Notes.get(id); } catch {}
+  }
+  if (n && !n.deleted) { enqueueAlert(n); if (!state.alertActive) nextAlert(); }
 }
 
 init();
