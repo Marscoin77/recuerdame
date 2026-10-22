@@ -48,20 +48,31 @@
 html {
   font-size: calc(var(--base) * var(--font-scale));
   -webkit-text-size-adjust: 100%;
-  overflow-x: hidden;
+  height: 100%;
 }
 [data-font="1.25"]  { --font-scale: 1.22; }
 [data-font="1.5"]   { --font-scale: 1.48; }
 
 body {
   margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--app-bg);
   color: var(--ink);
   line-height: 1.35;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
+  overflow: hidden;              /* el scroll vive SOLO en #main */
+}
+
+/* Única zona de scroll (patrón app-shell): fiable también en modo instalado. */
+#main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-overflow-scrolling: touch;
 }
 
 button { font-family: inherit; cursor: pointer; }
@@ -69,7 +80,7 @@ input { font-family: inherit; }
 
 /* ---------- Cabecera ---------- */
 .topbar {
-  position: sticky; top: 0; z-index: 30;
+  flex: none; z-index: 30;
   display: flex; align-items: center; justify-content: space-between;
   gap: .5rem;
   padding: .6rem .9rem;
@@ -81,9 +92,9 @@ input { font-family: inherit; }
 }
 :root[data-contrast="high"] .topbar { background: #000; border-bottom: 3px solid #fff; }
 
-.brand { display: flex; align-items: center; gap: .5rem; font-size: 1.3rem; font-weight: 700; }
-.brand-logo { font-size: 1.5rem; }
-.brand-name b { font-weight: 800; }
+.brand { display: flex; align-items: center; justify-content: center; min-height: var(--tap); min-width: var(--tap); }
+.brand-logo { font-size: 2.1rem; }
+.brand-name { display: none; }   /* sin nombre de la app, como pidió el usuario */
 
 .icon-btn {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -93,14 +104,29 @@ input { font-family: inherit; }
   background: rgba(255,255,255,.18);
   color: #fff; font-size: 1.15rem; font-weight: 700;
 }
-.icon-btn .icon { font-size: 1.6rem; line-height: 1; }
+.icon-btn .icon { font-size: 2rem; line-height: 1; }
 .icon-btn:active { transform: scale(.94); }
 .back-btn .back-text { font-size: 1.1rem; }
 :root[data-contrast="high"] .icon-btn { background: #fff; color: #000; border: 2px solid #fff; }
 
 /* ---------- Pantallas ---------- */
-.screen { padding: 1.1rem 1rem 6rem; max-width: 760px; margin: 0 auto; }
+.screen { padding: 1.1rem 1rem calc(2rem + env(safe-area-inset-bottom)); max-width: 760px; margin: 0 auto; }
 .screen[hidden] { display: none; }
+
+/* INICIO: ocupa toda la pantalla y SIEMPRE cabe sin scroll, por grande que
+   sea la letra (los tiles se escalan con la altura de la pantalla, no con la
+   fuente). */
+#screen-home {
+  height: 100%;
+  display: flex; flex-direction: column;
+  padding: .6rem 1rem calc(.8rem + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+#screen-home .screen-title { flex: none; margin: .2rem 0 .6rem; font-size: clamp(1.2rem, 3.4vh, 1.75rem); }
+#screen-home .home-grid { flex: 1 1 auto; min-height: 0; margin-bottom: .7rem; }
+#screen-home .home-simple { flex: 1 1 auto; min-height: 0; margin: .2rem 0 .7rem; }
+#screen-home .home-simple .simple-record { height: 100%; min-height: 0; }
+#screen-home .home-actions { flex: none; margin-top: 0; }
 
 .screen-title {
   font-size: 1.7rem; font-weight: 800; text-align: center;
@@ -109,24 +135,28 @@ input { font-family: inherit; }
 
 /* ---------- Rejilla de inicio (tiles) ---------- */
 .home-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+  display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr;
+  gap: clamp(.5rem, 1.8vh, 1rem);
 }
 .tile {
-  aspect-ratio: 1 / 1;
+  min-height: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: .5rem;
+  gap: .35rem;
   border: 4px solid var(--c);
   border-radius: var(--radius-lg);
   background: var(--bg);
   color: var(--c);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 .tile:active { transform: scale(.96); }
-.tile-emoji { font-size: 3.4rem; }
-.tile-label { font-size: 1.45rem; font-weight: 800; }
+.tile-emoji { font-size: clamp(2.4rem, 12vh, 5.2rem); line-height: 1; }
+.tile-label { font-size: clamp(1rem, 3.3vh, 1.8rem); font-weight: 800; text-align: center; }
 :root[data-contrast="high"] .tile { background: #000; color: #fff; }
 
-/* botón de subcategoría muestra texto más pequeño si es largo */
+/* Fuera del inicio (subcategorías) los tiles mantienen un tamaño cómodo. */
+#screen-subs .home-grid { grid-auto-rows: auto; }
+#screen-subs .tile { min-height: clamp(110px, 22vh, 180px); }
 .tile.sub .tile-label { font-size: 1.25rem; }
 
 /* ---------- Modo súper simple: un solo botón enorme ---------- */

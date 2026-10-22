@@ -32,11 +32,42 @@ export const Dictation = {
 };
 
 /* ---------- Voz (Text-To-Speech) ---------- */
-let voicesReady = false;
-function ensureVoices() {
-  if (voicesReady || !window.speechSynthesis) return;
-  speechSynthesis.getVoices();
-  voicesReady = true;
+let bestVoice = null;
+
+/* Puntúa una voz en español: cuanto más alto, mejor calidad percibida. */
+function scoreVoice(v) {
+  const name = (v.name || "").toLowerCase();
+  const lang = (v.lang || "").toLowerCase();
+  if (!/^es/.test(lang)) return -1;           // solo español
+  let s = 0;
+  if (/natural|neural/.test(name)) s += 100;  // Microsoft Online (Natural) — las mejores
+  if (/google/.test(name)) s += 60;           // Google español (Android/Chrome) — muy buena
+  if (v.localService === false) s += 25;       // voces en la nube suelen sonar mejor
+  if (/es-es|es_es/.test(lang)) s += 20;       // español de España
+  else if (/es-us|es-mx|es-419/.test(lang)) s += 8;
+  // Preferir voces femeninas: suelen entenderse mejor para mayores.
+  if (/elvira|helena|laura|sabina|paloma|lucia|mónica|monica|female|hembra|mujer/.test(name)) s += 10;
+  // Penalizar las robóticas clásicas.
+  if (/microsoft (helena|sabina) desktop|espeak|pico|compact/.test(name)) s -= 30;
+  return s;
+}
+
+function pickVoice() {
+  if (!window.speechSynthesis) return null;
+  const voices = speechSynthesis.getVoices() || [];
+  let best = null, bestScore = -1;
+  for (const v of voices) {
+    const sc = scoreVoice(v);
+    if (sc > bestScore) { bestScore = sc; best = v; }
+  }
+  return bestScore >= 0 ? best : null;
+}
+
+function refreshVoice() { bestVoice = pickVoice(); }
+if (window.speechSynthesis) {
+  refreshVoice();
+  // Las voces pueden cargarse de forma asíncrona.
+  try { speechSynthesis.addEventListener("voiceschanged", refreshVoice); } catch {}
 }
 
 export const Voice = {
@@ -44,15 +75,14 @@ export const Voice = {
 
   speak(text, { rate = 0.95, onEnd } = {}) {
     if (!window.speechSynthesis) { onEnd && onEnd(); return; }
-    ensureVoices();
     try { speechSynthesis.cancel(); } catch {}
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "es-ES";
+    if (!bestVoice) refreshVoice();
+    const v = bestVoice;
+    u.voice = v || null;
+    u.lang = (v && v.lang) || "es-ES";
     u.rate = rate;        // un poco más lento, mejor para mayores
     u.pitch = 1;
-    const v = speechSynthesis.getVoices().find((x) => /es(-|_)ES/i.test(x.lang)) ||
-              speechSynthesis.getVoices().find((x) => /^es/i.test(x.lang));
-    if (v) u.voice = v;
     if (onEnd) u.onend = onEnd;
     speechSynthesis.speak(u);
   },

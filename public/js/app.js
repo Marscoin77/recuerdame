@@ -104,8 +104,8 @@ function show(screen) {
   state.screen = screen;
   const atHome = screen === "home";
   $("#backBtn").hidden = atHome;
-  $("#brand").style.visibility = atHome ? "visible" : "visible";
-  window.scrollTo(0, 0);
+  const main = $("#main");
+  if (main) main.scrollTop = 0;
 }
 function pushNav() { state.stack.push({ screen: state.screen, section: state.section, sub: state.sub }); }
 function goBack() {
@@ -1228,6 +1228,7 @@ function toast(text, { actionText, onAction, onGone, ms = 4000 } = {}) {
 function bindGlobal() {
   $("#backBtn").addEventListener("click", goBack);
   $("#brand").addEventListener("click", () => { if (state.screen !== "home") goHome(); });
+  bindSwipeToSettings();
   $$(".tile[data-section]").forEach((t) =>
     t.addEventListener("click", () => {
       const s = t.dataset.section;
@@ -1236,6 +1237,29 @@ function bindGlobal() {
   $("#simpleRecord").addEventListener("click", () => openSection("otros"));
   $("#addSubBtn").addEventListener("click", addSubFlow);
   $("#reminderAlert").addEventListener("click", (e) => { if (e.target.id === "reminderAlert") { /* no cerrar por fuera */ } });
+}
+
+/* Gesto: un deslizamiento horizontal claro abre Ajustes (y lo cierra si ya
+   está abierto). Útil para llegar rápido a la letra grande sin apuntar al
+   engranaje. No interfiere con el scroll vertical ni con los diálogos. */
+function bindSwipeToSettings() {
+  const main = $("#main");
+  if (!main) return;
+  let x0 = 0, y0 = 0, t0 = 0;
+  main.addEventListener("touchstart", (e) => {
+    const t = e.changedTouches[0];
+    x0 = t.clientX; y0 = t.clientY; t0 = Date.now();
+  }, { passive: true });
+  main.addEventListener("touchend", (e) => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+    // Horizontal claro, rápido, y no mientras hay un diálogo abierto.
+    if (dt > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    if (document.querySelector(".overlay:not([hidden])")) return;
+    haptic();
+    if (state.screen === "settings") goBack();
+    else openSettings();
+  }, { passive: true });
 }
 
 function haptic(pattern = 20) {
