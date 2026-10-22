@@ -63,6 +63,23 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { headers: cors() });
 
+    // Digital Asset Links: vincula la app Android (APK/TWA) con esta web para
+    // que se abra a pantalla completa, sin barra de navegador.
+    if (pathname === "/.well-known/assetlinks.json") {
+      return new Response(JSON.stringify([
+        {
+          relation: ["delegate_permission/common.handle_all_urls"],
+          target: {
+            namespace: "android_app",
+            package_name: "dev.workers.adriagimenez238.recuerdame",
+            sha256_cert_fingerprints: [
+              "FF:7D:E3:64:A4:B3:08:AA:82:B3:21:7D:42:90:03:6D:AD:00:AE:7F:53:87:A8:02:47:51:93:03:F0:94:94:2C",
+            ],
+          },
+        },
+      ]), { headers: { "content-type": "application/json", "cache-control": "public, max-age=3600", ...cors() } });
+    }
+
     if (!pathname.startsWith("/api/")) {
       return env.ASSETS ? env.ASSETS.fetch(request) : new Response("Not found", { status: 404 });
     }
