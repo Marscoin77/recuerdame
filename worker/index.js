@@ -103,6 +103,31 @@ export default {
         return json({ ok: true, subs: filtered.length });
       }
 
+      // Aviso de PRUEBA a este dispositivo:  { code, endpoint? }
+      // Comprueba la entrega real del push (el único eslabón no verificable
+      // sin un móvil delante). Si no se pasa endpoint, avisa a todos los del código.
+      if (pathname === "/api/push/test" && request.method === "POST") {
+        if (!env.VAPID_PRIVATE_JWK) return json({ error: "push_no_configurado" }, 503);
+        const body = await request.json().catch(() => null);
+        if (!body || !body.code) return json({ error: "formato" }, 400);
+        const code = cleanCode(body.code);
+        const list = (await env.AUDIO_KV.get(subsKey(code), { type: "json" })) || [];
+        const targets = body.endpoint ? list.filter((s) => s.endpoint === body.endpoint) : list;
+        if (!targets.length) return json({ error: "sin_suscripcion" }, 404);
+        const payload = {
+          kind: "test",
+          title: "✅ Prueba de aviso",
+          body: "¡Funciona! Así te avisaré a la hora de tus recordatorios.",
+          urgency: "high",
+        };
+        let sent = 0;
+        for (const s of targets) {
+          const r = await sendPush(s, payload, env).catch(() => ({ ok: false, status: 0 }));
+          if (r.ok) sent++;
+        }
+        return json({ ok: sent > 0, sent });
+      }
+
       // Baja de suscripción push:  { code, endpoint }
       if (pathname === "/api/push/unsubscribe" && request.method === "POST") {
         const body = await request.json().catch(() => null);

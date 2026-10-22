@@ -79,6 +79,29 @@ export const Push = {
     } catch {}
   },
 
+  /**
+   * Envía un aviso de PRUEBA a este mismo dispositivo para comprobar que
+   * los avisos en segundo plano llegan de verdad (vía el servidor).
+   * @returns {Promise<"ok"|"no_sub"|"unsupported"|"error">}
+   */
+  async test(code) {
+    if (!this.supported()) return "unsupported";
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return "no_sub";
+      const r = await fetch(API + "/api/push/test", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code, endpoint: sub.endpoint }),
+      });
+      const j = await r.json().catch(() => ({}));
+      return r.ok && j.ok ? "ok" : "error";
+    } catch {
+      return "error";
+    }
+  },
+
   /** Re-registra la suscripción (por si el servidor la perdió). */
   async refresh(code, role = "owner") {
     if (!(await this.isSubscribed())) return;

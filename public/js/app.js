@@ -789,6 +789,7 @@ function bindSettings() {
   $("#setVoice").addEventListener("change", (e) => setSetting("voiceConfirm", e.target.checked));
   $("#setAutoplay").addEventListener("change", (e) => setSetting("autoPlay", e.target.checked));
   $("#setPush").addEventListener("change", (e) => togglePush(e.target.checked));
+  $("#pushTest").addEventListener("click", testPush);
   $("#roleSeg").addEventListener("click", (e) => {
     const b = e.target.closest(".seg-btn[data-role]"); if (!b) return;
     changeRole(b.dataset.role);
@@ -827,9 +828,29 @@ function markRoleButtons() {
 }
 async function refreshPushToggle() {
   const el = $("#setPush");
-  if (!Push.supported()) { el.checked = false; el.disabled = true; $("#pushHint").textContent = "Este navegador no permite avisos en segundo plano. Prueba a instalar la app en el móvil (Chrome en Android, o Safari en iPhone con iOS 16.4 o superior)."; return; }
+  if (!Push.supported()) { el.checked = false; el.disabled = true; $("#pushTest").hidden = true; $("#pushHint").textContent = "Este navegador no permite avisos en segundo plano. Prueba a instalar la app en el móvil (Chrome en Android, o Safari en iPhone con iOS 16.4 o superior)."; return; }
   el.disabled = false;
-  el.checked = await Push.isSubscribed();
+  const sub = await Push.isSubscribed();
+  el.checked = sub;
+  // El botón de prueba solo tiene sentido si los avisos están activos.
+  $("#pushTest").hidden = !sub;
+}
+
+/* Botón «Probar un aviso»: comprueba la entrega real del push a este móvil. */
+async function testPush() {
+  const code = state.settings.syncCode;
+  if (!code) return toast("Primero activa los avisos en segundo plano");
+  haptic();
+  toast("Enviando aviso de prueba…");
+  const res = await Push.test(code);
+  if (res === "ok") {
+    toast("✅ Aviso enviado. Debería aparecer en unos segundos.");
+  } else if (res === "no_sub") {
+    toast("Activa primero los avisos en segundo plano");
+    refreshPushToggle();
+  } else {
+    toast("No se pudo enviar el aviso de prueba");
+  }
 }
 function markFontButtons() {
   $$("#screen-settings .seg-btn[data-font]").forEach((b) =>
@@ -945,6 +966,7 @@ async function togglePush(on) {
   if (!on) {
     await Push.disable(state.settings.syncCode);
     await setSetting("push", false);
+    $("#pushTest").hidden = true;
     toast("🔕 Avisos en segundo plano desactivados");
     return;
   }
@@ -956,6 +978,7 @@ async function togglePush(on) {
   const res = await Push.enable(code, state.settings.role || "owner");
   if (res === "ok") {
     await setSetting("push", true);
+    $("#pushTest").hidden = false;
     toast("🔔 Listo: te avisaré aunque la app esté cerrada");
     speakConfirm("Avisos activados");
   } else if (res === "denied") {
